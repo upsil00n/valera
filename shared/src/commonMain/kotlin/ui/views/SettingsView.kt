@@ -74,6 +74,8 @@ import ui.composables.ScreenHeading
 import ui.composables.buttons.NavigateUpButton
 import ui.viewmodels.SettingsViewModel
 import kotlin.time.Duration.Companion.seconds
+import ui.composables.KeyGenerationSection
+import androidx.compose.material.icons.outlined.Key
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +91,7 @@ fun SettingsView(
     onClickLicenses: (() -> Unit)?,
     koinScope: Scope,
     onReset: () -> Unit,
+    onClickZkProofTest: () -> Unit,
     settingsViewModel: SettingsViewModel = koinViewModel(scope = koinScope),
 ) {
     var isLoading by rememberSaveable {
@@ -261,6 +264,40 @@ fun SettingsView(
                             },
                             modifier = listSpacingModifier.fillMaxWidth(),
                         )
+                        TextIconButtonListItem(
+                            icon = {
+                                Text("🧪")  // emoji як іконка
+                            },
+                            label = "Test ZK Proof",
+                            onClick = onClickZkProofTest,
+                            modifier = listSpacingModifier.fillMaxWidth(),
+                        )
+                        TextIconButtonListItem(
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Key,
+                                    contentDescription = null,
+                                )
+                            },
+                            label = "Vote Signing Requests",
+                            onClick = {
+                                // TODO: Навигация к экрану подписи
+                                // onNavigateToVoteSigning()
+                            },
+                            modifier = listSpacingModifier.fillMaxWidth(),
+                        )
+                        Column(
+                            modifier = layoutSpacingModifier
+                        ) {
+                            Text(
+                                text = "Identity Key Pair",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            KeyGenerationSection(
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
 

@@ -68,6 +68,7 @@ import ui.views.intents.*
 import ui.views.iso.holder.HolderView
 import ui.views.iso.verifier.VerifierView
 import ui.views.presentation.PresentationView
+import ui.views.ZkProofTestView
 
 internal object NavigatorTestTags {
     const val loadingTestTag = "loadingTestTag"
@@ -602,6 +603,9 @@ private fun WalletNavHost(
                 onClickShareLogFile = {
                     navigate(LogRoute)
                 },
+                onClickZkProofTest = {
+                    navigate(ZkProofTestRoute)
+                },
                 onClickLogo = onClickLogo,
                 onClickSettings = { popBackStack(HomeScreenRoute) },
                 onClickBack = navigateBack,
@@ -612,12 +616,22 @@ private fun WalletNavHost(
                 koinScope = koinScope
             )
         }
+
+
         composable<UserProfileRoute> {
             UserProfileView(
                 navigateUp = navigateBack,
                 onClickLogo = onClickLogo,
                 onClickSettings = { navigate(SettingsRoute) },
                 koinScope = koinScope
+            )
+        }
+
+        composable<ZkProofTestRoute> {
+            ZkProofTestView(
+                navigateUp = navigateBack,
+                onClickLogo = onClickLogo,
+                onClickSettings = { navigate(SettingsRoute) }
             )
         }
 
