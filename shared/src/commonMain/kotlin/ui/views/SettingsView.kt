@@ -272,20 +272,6 @@ fun SettingsView(
                             onClick = onClickZkProofTest,
                             modifier = listSpacingModifier.fillMaxWidth(),
                         )
-                        TextIconButtonListItem(
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Outlined.Key,
-                                    contentDescription = null,
-                                )
-                            },
-                            label = "Vote Signing Requests",
-                            onClick = {
-                                // TODO: Навигация к экрану подписи
-                                // onNavigateToVoteSigning()
-                            },
-                            modifier = listSpacingModifier.fillMaxWidth(),
-                        )
                         Column(
                             modifier = layoutSpacingModifier
                         ) {

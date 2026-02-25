@@ -14,7 +14,7 @@ import ui.viewmodels.iso.holder.HolderViewModel
 import ui.viewmodels.iso.common.TransferOptionsViewModel
 import ui.viewmodels.iso.verifier.VerifierViewModel
 import ui.viewmodels.UserProfileViewModel
-
+import ui.viewmodels.VoteSigningViewModel
 fun uiModule() = module {
     singleOf(::SnackbarService)
 
@@ -28,4 +28,5 @@ fun uiModule() = module {
     viewModelOf(::CapabilitiesViewModel)
     viewModelOf(::InitializationViewModel)
     viewModelOf(::UserProfileViewModel)
+    viewModelOf(::VoteSigningViewModel)
 }
