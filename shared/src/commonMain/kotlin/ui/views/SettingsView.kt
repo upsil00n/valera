@@ -76,7 +76,10 @@ import ui.viewmodels.SettingsViewModel
 import kotlin.time.Duration.Companion.seconds
 import ui.composables.KeyGenerationSection
 import androidx.compose.material.icons.outlined.Key
-
+import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.Draw
+import ui.navigation.routes.SignatureRequestsRoute
+import ui.navigation.routes.Route
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsView(
@@ -92,6 +95,7 @@ fun SettingsView(
     koinScope: Scope,
     onReset: () -> Unit,
     onClickZkProofTest: () -> Unit,
+    navigate: (Route) -> Unit,
     settingsViewModel: SettingsViewModel = koinViewModel(scope = koinScope),
 ) {
     var isLoading by rememberSaveable {
@@ -270,6 +274,19 @@ fun SettingsView(
                             },
                             label = "Test ZK Proof",
                             onClick = onClickZkProofTest,
+                            modifier = listSpacingModifier.fillMaxWidth(),
+                        )
+                        TextIconButtonListItem(
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Draw,
+                                    contentDescription = null,
+                                )
+                            },
+                            label = "Signature requests",
+                            onClick = {
+                                navigate(SignatureRequestsRoute)  // ← ДОЛЖНО БЫТЬ ТАК!
+                            },
                             modifier = listSpacingModifier.fillMaxWidth(),
                         )
                         Column(

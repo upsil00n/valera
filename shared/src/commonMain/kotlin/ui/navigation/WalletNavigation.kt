@@ -69,7 +69,8 @@ import ui.views.iso.holder.HolderView
 import ui.views.iso.verifier.VerifierView
 import ui.views.presentation.PresentationView
 import ui.views.ZkProofTestView
-
+import ui.navigation.routes.SignatureRequestsRoute
+import ui.views.SignatureRequestsView
 internal object NavigatorTestTags {
     const val loadingTestTag = "loadingTestTag"
 }
@@ -246,6 +247,12 @@ private fun WalletNavHost(
                     settingsRepository.set(isConditionsAccepted = true)
                     navigate(InitializationRoute)
                 }, onClickLogo = onClickLogo
+            )
+        }
+        composable<SignatureRequestsRoute> {
+            SignatureRequestsView(
+                onClickBack = navigateBack,
+                onClickLogo = onClickLogo
             )
         }
         composable<HomeScreenRoute> {
@@ -613,7 +620,8 @@ private fun WalletNavHost(
                 onClickDataProtectionPolicy = null,
                 onClickLicenses = null,
                 onReset = { popBackStack(InitializationRoute) },
-                koinScope = koinScope
+                koinScope = koinScope,
+                navigate = navigate
             )
         }
 
