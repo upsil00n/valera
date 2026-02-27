@@ -9,6 +9,7 @@ import ui.viewmodels.CapabilitiesViewModel
 import ui.viewmodels.CredentialsViewModel
 import ui.viewmodels.InitializationViewModel
 import ui.viewmodels.SettingsViewModel
+import ui.viewmodels.SignatureRequestsViewModel
 import ui.viewmodels.authentication.AuthenticationSuccessViewModel
 import ui.viewmodels.iso.holder.HolderViewModel
 import ui.viewmodels.iso.common.TransferOptionsViewModel
@@ -27,4 +28,5 @@ fun uiModule() = module {
     viewModelOf(::CapabilitiesViewModel)
     viewModelOf(::InitializationViewModel)
     viewModelOf(::UserProfileViewModel)
+    viewModelOf(::SignatureRequestsViewModel)
 }
