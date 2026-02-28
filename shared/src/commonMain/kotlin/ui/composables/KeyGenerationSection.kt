@@ -9,18 +9,32 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import data.storage.CryptoKeyRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 
 @Composable
 fun KeyGenerationSection(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cryptoKeyRepository: CryptoKeyRepository = koinInject()
 ) {
     var privateKey by remember { mutableStateOf("") }
     var publicKey by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    // Загружаем существующие ключи при старте
+    LaunchedEffect(Unit) {
+        val existingPrivateKey = cryptoKeyRepository.getPrivateKey()
+        val existingPublicKey = cryptoKeyRepository.getPublicKey()
+
+        if (existingPrivateKey != null && existingPublicKey != null) {
+            privateKey = existingPrivateKey
+            publicKey = existingPublicKey
+        }
+    }
 
     Column(modifier = modifier) {
         Button(
@@ -32,6 +46,10 @@ fun KeyGenerationSection(
                     }
                     privateKey = keys.first
                     publicKey = keys.second
+
+                    // Сохраняем ключи
+                    cryptoKeyRepository.saveKeys(privateKey, publicKey)
+
                     isGenerating = false
                 }
             },
@@ -120,13 +138,22 @@ private fun byteToHex(byte: Byte): String {
 private fun generateKeyPair(): Pair<String, String> {
     // Using SecureRandom for cryptographically strong random generation
     val random = kotlin.random.Random.Default
-    val privateKeyBytes = ByteArray(32) { random.nextBits(8).toByte() }
 
-    // Конвертация в hex используя кроссплатформенный метод
+    // Generate 32 bytes for private key (Ed25519 standard)
+    val privateKeyBytes = ByteArray(32)
+    for (i in privateKeyBytes.indices) {
+        privateKeyBytes[i] = random.nextInt(256).toByte()
+    }
+
+    // For demo purposes, derive public key from private key
+    // In production, use proper Ed25519 implementation
+    val publicKeyBytes = ByteArray(32)
+    for (i in publicKeyBytes.indices) {
+        publicKeyBytes[i] = (privateKeyBytes[i].toInt() xor 0x5A).toByte()
+    }
+
+    // Convert to hex strings
     val privateKeyHex = privateKeyBytes.joinToString("") { byteToHex(it) }
-
-    // Simulate public key derivation (in production, use actual Ed25519)
-    val publicKeyBytes = ByteArray(32) { random.nextBits(8).toByte() }
     val publicKeyHex = publicKeyBytes.joinToString("") { byteToHex(it) }
 
     return Pair(privateKeyHex, publicKeyHex)
