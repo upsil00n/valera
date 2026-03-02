@@ -1,7 +1,6 @@
 package ui.viewmodels
 
 import androidx.lifecycle.ViewModel
-import crypto.BabyJubJub
 import crypto.ZkKeyGenerator
 import data.SignatureRequest
 import data.storage.CryptoKeyRepository
@@ -56,31 +55,38 @@ class SignatureRequestsViewModel : ViewModel(), KoinComponent {
 
     suspend fun signRequest(requestId: String) {
         try {
-            val privateKeyHex = cryptoKeyRepository.getPrivateKey()
-            val publicKeyHex = cryptoKeyRepository.getPublicKey()
+            val privateKey = cryptoKeyRepository.getPrivateKey()
+            val publicKey = cryptoKeyRepository.getPublicKey()
 
-            if (privateKeyHex == null || publicKeyHex == null) {
+            if (privateKey == null || publicKey == null) {
                 println("❌ No keys found. Generate keys in Settings first")
                 return
             }
 
             val request = _requests.value.find { it.id == requestId } ?: return
 
-            println("🔐 Signing request with Baby JubJub EdDSA...")
+            println("🔐 Signing with Baby JubJub...")
 
-            // Весь остальной код...
+            // Serialize request to JSON
+            val messageJson = Json.encodeToString(request)
+            val messageBytes = messageJson.encodeToByteArray()
 
-        } catch (e: IndexOutOfBoundsException) {  // ← Исправлено
-            println("❌ Array index error: ${e.message}")
-            e.printStackTrace()
-        } catch (e: IllegalArgumentException) {
-            println("❌ Illegal argument: ${e.message}")
-            e.printStackTrace()
-        } catch (e: ArithmeticException) {
-            println("❌ Math error: ${e.message}")
-            e.printStackTrace()
-        } catch (e: Exception) {
-            println("❌ Error signing request: ${e.message}")
+            println("📝 Message: $messageJson")
+
+            // ✅ Sign with Baby JubJub через ZkKeyGenerator
+            val signatureHex = ZkKeyGenerator.signToHex(privateKey, messageBytes)
+
+            // ✅ Verify immediately
+            val isValid = ZkKeyGenerator.verifyHex(publicKey, messageBytes, signatureHex)
+
+            println("✅ Signature: $signatureHex")
+            println("✓ Verification: ${if (isValid) "PASSED ✓" else "FAILED ✗"}")
+
+            _signatures.value = _signatures.value + (requestId to signatureHex)
+            _requests.value = _requests.value.filter { it.id != requestId }
+
+        } catch (e: Throwable) {
+            println("❌ Error: ${e.message}")
             e.printStackTrace()
         }
     }

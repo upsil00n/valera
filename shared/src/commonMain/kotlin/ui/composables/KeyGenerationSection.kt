@@ -24,6 +24,7 @@ fun KeyGenerationSection(
     var privateKey by remember { mutableStateOf("") }
     var publicKey by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     // Загружаем существующие ключи при старте
@@ -42,18 +43,30 @@ fun KeyGenerationSection(
             onClick = {
                 scope.launch {
                     isGenerating = true
-                    val keys = withContext(Dispatchers.Default) {
-                        // ZK-friendly key generation with Baby JubJub
-                        val keyPair = ZkKeyGenerator.generate()
-                        Pair(keyPair.privateKey, keyPair.publicKey)
+                    error = null
+                    try {
+                        val keys = withContext(Dispatchers.Default) {
+                            println("🔑 Generating Baby JubJub keys...")
+                            val keyPair = ZkKeyGenerator.generate()
+                            println("✅ Keys generated successfully!")
+                            println("   Private: ${keyPair.privateKey}")
+                            println("   Public: ${keyPair.publicKey}")
+                            Pair(keyPair.privateKey, keyPair.publicKey)
+                        }
+                        privateKey = keys.first
+                        publicKey = keys.second
+
+                        // Сохраняем ключи
+                        cryptoKeyRepository.saveKeys(privateKey, publicKey)
+                        println("💾 Keys saved to storage")
+
+                    } catch (e: Exception) {
+                        error = e.message
+                        println("❌ Key generation failed: ${e.message}")
+                        e.printStackTrace()
+                    } finally {
+                        isGenerating = false
                     }
-                    privateKey = keys.first
-                    publicKey = keys.second
-
-                    // Сохраняем ключи
-                    cryptoKeyRepository.saveKeys(privateKey, publicKey)
-
-                    isGenerating = false
                 }
             },
             enabled = !isGenerating,
@@ -65,12 +78,27 @@ fun KeyGenerationSection(
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(8.dp))
-            Text(if (isGenerating) "Generating..." else "Generate ZK Keys")
+            Text(if (isGenerating) "Generating..." else "Generate Baby JubJub Keys")
         }
 
         if (isGenerating) {
             Spacer(Modifier.height(16.dp))
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        if (error != null) {
+            Spacer(Modifier.height(16.dp))
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = "❌ Error: $error",
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
         }
 
         if (publicKey.isNotEmpty()) {
@@ -85,13 +113,13 @@ fun KeyGenerationSection(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "🔐 ZK-Friendly Keys",
+                        text = "🔐 Baby JubJub (ZK-friendly)",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Baby JubJub Curve • EdDSA • Poseidon Hash",
+                        text = "Compatible with circom/zkSNARKs",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -101,7 +129,7 @@ fun KeyGenerationSection(
 
             // Public Key Field
             Text(
-                text = "Public Key (64 bytes: x + y)",
+                text = "Public Key",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -116,7 +144,7 @@ fun KeyGenerationSection(
                         fontFamily = FontFamily.Monospace
                     ),
                     minLines = 2,
-                    maxLines = 3
+                    maxLines = 4
                 )
             }
 
@@ -124,7 +152,7 @@ fun KeyGenerationSection(
 
             // Private Key Field
             Text(
-                text = "Private Key (32 bytes)",
+                text = "Private Key",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.error
             )
@@ -139,7 +167,7 @@ fun KeyGenerationSection(
                         fontFamily = FontFamily.Monospace
                     ),
                     minLines = 2,
-                    maxLines = 3
+                    maxLines = 4
                 )
             }
 
