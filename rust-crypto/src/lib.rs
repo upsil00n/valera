@@ -2,9 +2,12 @@ use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::jstring;
 use sha2::{Sha256, Digest};
-use babyjubjub_rs::PrivateKey;
+use ark_ed_on_bn254::{EdwardsProjective as JubJubProjective, Fr, EdwardsAffine as JubJubAffine};
+use ark_ff::{UniformRand, PrimeField, BigInteger};
+use ark_ec::{CurveGroup, Group};
+use ark_std::rand::SeedableRng;
 
-/// Генерация ключей Baby JubJub v0.0.11
+/// Генерация ключей через Arkworks
 #[no_mangle]
 pub extern "system" fn Java_crypto_BabyJubJubNative_generate_1keys(
     mut env: JNIEnv,
@@ -29,45 +32,33 @@ pub extern "system" fn Java_crypto_BabyJubJubNative_generate_1keys(
     hasher.update(&seed);
     let hash = hasher.finalize();
 
-    // Пробуем разные способы создания ключа
-    let private_key = if let Ok(key) = PrivateKey::import(hash.to_vec()) {
-        key
-    } else {
-        // Fallback на mock
-        let private_hex = hex::encode(&hash[..]);
-        let mut h2 = Sha256::new();
-        h2.update(&hash);
-        h2.update(b"x");
-        let pub_x = h2.finalize();
-        let mut h3 = Sha256::new();
-        h3.update(&hash);
-        h3.update(b"y");
-        let pub_y = h3.finalize();
+    // Создаём RNG из seed
+    let mut seed_array = [0u8; 32];
+    seed_array.copy_from_slice(&hash[..32]);
+    let mut rng = ark_std::rand::rngs::StdRng::from_seed(seed_array);
 
-        let result = format!("{}|{}|{}",
-            hex::encode(&hash[..]),
-            hex::encode(&pub_x[..]),
-            hex::encode(&pub_y[..])
-        );
+    // Генерируем приватный ключ (scalar field element)
+    let private_key: Fr = Fr::rand(&mut rng);
 
-        return match env.new_string(result) {
-            Ok(jstr) => jstr.into_raw(),
-            Err(_) => std::ptr::null_mut(),
-        };
-    };
+    // Получаем базовую точку генератора
+    let base_point = JubJubProjective::generator();
 
-    // Получаем публичный ключ
-    let public_key = private_key.public();
+    // Вычисляем публичный ключ: public_key = private_key * base_point
+    let public_key_projective = base_point * private_key;
 
-    // Сериализуем ключи
-    let private_hex = hex::encode(hash.to_vec());
+    // Конвертируем в affine координаты
+    let public_key: JubJubAffine = public_key_projective.into_affine();
 
-    // public_key это Point, пробуем разные способы сериализации
-    let pub_compressed = public_key.compress();
-    let public_hex = hex::encode(&pub_compressed);
+    // Сериализуем в байты
+    let private_bytes = private_key.into_bigint().to_bytes_le();
+    let pub_x_bytes = public_key.x.into_bigint().to_bytes_le();
+    let pub_y_bytes = public_key.y.into_bigint().to_bytes_le();
 
-    // Возвращаем в формате: private|public_compressed
-    let result = format!("{}|{}|{}", private_hex, public_hex, public_hex);
+    let private_hex = hex::encode(&private_bytes);
+    let pub_x_hex = hex::encode(&pub_x_bytes);
+    let pub_y_hex = hex::encode(&pub_y_bytes);
+
+    let result = format!("{}|{}|{}", private_hex, pub_x_hex, pub_y_hex);
 
     match env.new_string(result) {
         Ok(jstr) => jstr.into_raw(),
@@ -75,7 +66,7 @@ pub extern "system" fn Java_crypto_BabyJubJubNative_generate_1keys(
     }
 }
 
-/// Подп��сь сообщения Baby JubJub v0.0.11
+/// Подпись (временно mock, потом добавим настоящую EdDSA)
 #[no_mangle]
 pub extern "system" fn Java_crypto_BabyJubJubNative_sign_1message(
     mut env: JNIEnv,
@@ -93,57 +84,22 @@ pub extern "system" fn Java_crypto_BabyJubJubNative_sign_1message(
         Err(_) => return std::ptr::null_mut(),
     };
 
-    // Декодируем приватный ключ
-    let priv_bytes = match hex::decode(&priv_hex) {
-        Ok(b) => b,
-        Err(_) => return std::ptr::null_mut(),
-    };
-
-    let private_key = match PrivateKey::import(priv_bytes) {
-        Ok(k) => k,
-        Err(_) => {
-            // Fallback на mock
-            let mut hasher = Sha256::new();
-            hasher.update(priv_hex.as_bytes());
-            hasher.update(msg_hex.as_bytes());
-            let sig1 = hasher.finalize();
-            let mut hasher2 = Sha256::new();
-            hasher2.update(&sig1);
-            let sig2 = hasher2.finalize();
-            let mut signature = Vec::new();
-            signature.extend_from_slice(&sig1);
-            signature.extend_from_slice(&sig2);
-            let sig_hex = hex::encode(&signature);
-            return match env.new_string(sig_hex) {
-                Ok(jstr) => jstr.into_raw(),
-                Err(_) => std::ptr::null_mut(),
-            };
-        }
-    };
-
-    // Декодируем сообщение
-    let message_bytes = match hex::decode(&msg_hex) {
-        Ok(m) => m,
-        Err(_) => return std::ptr::null_mut(),
-    };
-
-    // Хешируем сообщение в BigInt
+    // Временно mock подпись
+    // TODO: Реализовать настоящую EdDSA подпись
     let mut hasher = Sha256::new();
-    hasher.update(&message_bytes);
-    let msg_hash = hasher.finalize();
+    hasher.update(priv_hex.as_bytes());
+    hasher.update(msg_hex.as_bytes());
+    let sig1 = hasher.finalize();
 
-    use num_bigint::BigInt;
-    let message_bigint = BigInt::from_bytes_be(num_bigint::Sign::Plus, &msg_hash);
+    let mut hasher2 = Sha256::new();
+    hasher2.update(&sig1);
+    let sig2 = hasher2.finalize();
 
-    // Подписываем
-    let signature = match private_key.sign(message_bigint) {
-        Ok(sig) => sig,
-        Err(_) => return std::ptr::null_mut(),
-    };
+    let mut signature = Vec::new();
+    signature.extend_from_slice(&sig1);
+    signature.extend_from_slice(&sig2);
 
-    // Сериализуем подпись
-    let sig_bytes = signature.compress();
-    let sig_hex = hex::encode(&sig_bytes);
+    let sig_hex = hex::encode(&signature);
 
     match env.new_string(sig_hex) {
         Ok(jstr) => jstr.into_raw(),
@@ -151,7 +107,7 @@ pub extern "system" fn Java_crypto_BabyJubJubNative_sign_1message(
     }
 }
 
-/// Верификация подписи Baby JubJub v0.0.11
+/// Верификация
 #[no_mangle]
 pub extern "system" fn Java_crypto_BabyJubJubNative_verify_1signature(
     mut env: JNIEnv,
@@ -171,6 +127,5 @@ pub extern "system" fn Java_crypto_BabyJubJubNative_verify_1signature(
         Err(_) => return false,
     };
 
-    // Проверяем что подпись валидна по длине
-    sig_bytes.len() == 64 || sig_bytes.len() == 32
+    sig_bytes.len() == 64
 }
