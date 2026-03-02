@@ -1,25 +1,35 @@
-# Настройки NDK
+# Инициализация Visual Studio Build Tools
+$vsPath = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+$vcvarsPath = "$vsPath\VC\Auxiliary\Build\vcvars64.bat"
+
+if (-not (Test-Path $vcvarsPath)) {
+    Write-Host "ERROR: Visual Studio Build Tools not found at: $vsPath"
+    exit 1
+}
+
+# Запускаем vcvars64.bat и сохраняем переменные окружения
+$tempFile = [System.IO.Path]::GetTempFileName()
+cmd /c "`"$vcvarsPath`" && set" > $tempFile
+
+Get-Content $tempFile | ForEach-Object {
+    if ($_ -match "^(.*?)=(.*)$") {
+        Set-Item -Path "Env:$($matches[1])" -Value $matches[2]
+    }
+}
+
+Remove-Item $tempFile
+
+Write-Host "Visual Studio Build Tools initialized"
+
+# Проверка NDK
 $env:ANDROID_NDK_HOME = "C:\Users\$env:USERNAME\AppData\Local\Android\Sdk\ndk\29.0.14206865"
 
 if (-not (Test-Path $env:ANDROID_NDK_HOME)) {
-    Write-Host "NDK not found at: $env:ANDROID_NDK_HOME"
+    Write-Host "ERROR: NDK not found at: $env:ANDROID_NDK_HOME"
     exit 1
 }
 
 Write-Host "Using NDK: $env:ANDROID_NDK_HOME"
-
-# Toolchain paths
-$ndkToolchain = "$env:ANDROID_NDK_HOME\toolchains\llvm\prebuilt\windows-x86_64\bin"
-
-$env:AR_aarch64_linux_android = "$ndkToolchain\llvm-ar.exe"
-$env:CC_aarch64_linux_android = "$ndkToolchain\aarch64-linux-android21-clang.cmd"
-
-$env:AR_armv7_linux_androideabi = "$ndkToolchain\llvm-ar.exe"
-$env:CC_armv7_linux_androideabi = "$ndkToolchain\armv7a-linux-androideabi21-clang.cmd"
-
-$env:AR_x86_64_linux_android = "$ndkToolchain\llvm-ar.exe"
-$env:CC_x86_64_linux_android = "$ndkToolchain\x86_64-linux-android21-clang.cmd"
-
 Write-Host "Building for Android..."
 
 # Компиляция
@@ -50,11 +60,11 @@ New-Item -ItemType Directory -Force -Path "$jniLibsPath\armeabi-v7a" | Out-Null
 New-Item -ItemType Directory -Force -Path "$jniLibsPath\x86_64" | Out-Null
 
 # Копируем библиотеки
-Copy-Item "target\aarch64-linux-android\release\valera_crypto.dll" "$jniLibsPath\arm64-v8a\libvalera_crypto.so" -Force
-Copy-Item "target\armv7-linux-androideabi\release\valera_crypto.dll" "$jniLibsPath\armeabi-v7a\libvalera_crypto.so" -Force
-Copy-Item "target\x86_64-linux-android\release\valera_crypto.dll" "$jniLibsPath\x86_64\libvalera_crypto.so" -Force
+Copy-Item "target\aarch64-linux-android\release\libvalera_crypto.so" "$jniLibsPath\arm64-v8a\libvalera_crypto.so" -Force
+Copy-Item "target\armv7-linux-androideabi\release\libvalera_crypto.so" "$jniLibsPath\armeabi-v7a\libvalera_crypto.so" -Force
+Copy-Item "target\x86_64-linux-android\release\libvalera_crypto.so" "$jniLibsPath\x86_64\libvalera_crypto.so" -Force
 
-Write-Host "Build complete! Libraries copied to jniLibs"
+Write-Host "Build complete! Libraries copied to jniLibs:"
 Write-Host "  - arm64-v8a/libvalera_crypto.so"
 Write-Host "  - armeabi-v7a/libvalera_crypto.so"
-Write-Host "  - x86_64/libvalera_crypto.so"cd C:\Users\lykye\Desktop\SEMESTER\myValera\valera\rust-crypto
+Write-Host "  - x86_64/libvalera_crypto.so"
